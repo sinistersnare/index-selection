@@ -1,0 +1,5 @@
+P0(y) :- Role(x,y,z) P0(x)
+P1(y,z) :- Role(x,y,z) P1(x,y)
+P2(x,y) :- Role(x,y,z) P2(x,z)
+P3(x,z,y) :- Role(x,y,z) P3(x,z,y)
+Role(x,y,z) :- P3(x,y,z)

@@ -1,0 +1,6 @@
+R0(x,y) :- R1(x,y,z) R2(z,x) R3(x,y,z)
+R1(x,z,y) :- R0(z,y) R1(z,x) R3(y,4,x)
+R2(x,x) :- R0(x,y) R1(x,1,z) R2(x,z)
+R3(x,z,y) :- R0(y,x) R1(x,y,z) R2(x,x)
+R0(1,3) :-
+R1(3,2) :-
