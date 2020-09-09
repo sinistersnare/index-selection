@@ -1,4 +1,29 @@
 # Project I: Automatic Index Selection for Datalog
+
+## Team Notes ##
+
+( I wrote this in a separate repo, then realized I should just fork this).
+
+Index Selection Algorithm based on
+
+P. Subotić, H. Jordan, L. Chang, A. Fekete, and B. Scholz, “Automatic index selection for large-scale datalog computation,” Proc. VLDB Endow., vol. 12, no. 2, pp. 141–153, Oct. 2018, doi: 10.14778/3282495.3282500.
+
+find here: http://www.vldb.org/pvldb/vol12/p141-subotic.pdf
+
+This project:
+
+https://github.com/kmicinski/index-selection
+
+this class:
+
+https://kmicinski.com/cis700-f20/
+
+TODO:
+    * Get MIT license authorization from everyone in class.
+
+
+
+
 ### CIS 700, Syracuse U, Fall 2020
 ### Instructor: Kris Micinski
 
@@ -55,7 +80,7 @@ relation:
 - `R3` -- `{(0,1)}`, for the same reason as `R0` needs `(0,1)`.
 
 For examples that would generate more than one index, look at Table 1
-in the paper. 
+in the paper.
 
 #### Sample inputs
 
@@ -133,7 +158,7 @@ terminal. For example, this would be a reasonable implementation:
 R0 -- 2 indices
 (0, 3, 1, 2, 4)
 (2, 4, 0, 1, 3)
-... 
+...
 ```
 
 I will not be using automated tests to grade this project. I will
