@@ -64,6 +64,26 @@ def form_clause(line: str) -> Clause:
     searches = {form_search(rs, bindings) for rs in body.split()}
     return Clause(bindings, searches)
 
+def get_search_usages(program: str) -> None:
+    """DOCS! AND TESTS??!?!?!?"""
+
+    # I dont think that clauses really need to exist,
+    # Since I ensure only bound variables are used in the form_search
+    # function. So maybe we juts need a Set[Search] and union
+    # all the searches in each line?
+    # Maybe it was bad to remove info early, because now we dont have the info
+    # on constants used and such.
+    clauses = (form_clause(c) for c in program.split('\n'))
+    search_usages = {}
+    for clause in clauses:
+        for search in clause.searches:
+            if search.name in search_usages:
+                search_usages[search.name].append(search.parameters)
+            else:
+                search_usages[search.name] = [search.parameters]
+    return search_usages
+
+
 def main():
     datalog = """
 R0(x,y) :- R1(x,y) R2(x,z)
@@ -79,14 +99,17 @@ R3(x,1) :- R0(x,y)
     # TODO: construct a pathological case that changing lex order
     #       will make the |S| smaller.
     pathological_lex = """
-R0(x,y, z) :- S0(x,_,_)
+R0(x,y,z) :- S0(x,_,_)
 R0(x,y,z) :- S0(_,y,z)
 R0(x,y,z) :- S0(x,y,z)
-"""
+""".strip()
 
-    clauses = [form_clause(c) for c in datalog.split('\n')]
-    for clause in clauses:
-        print("{}".format(clause))
+    # IDK if this function is useful for the actual work,
+    # But its helpful to show usages at least.
+    usages = get_search_usages(pathological_lex)
+
+    from pprint import pprint
+    pprint(usages)
     # print("{}".format(list(clauses)[1]))
     # print(datalog)
 

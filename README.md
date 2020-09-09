@@ -21,7 +21,7 @@ https://kmicinski.com/cis700-f20/
 TODO:
     * Get MIT license authorization from everyone in class.
 
-
+## END TEAM NOTES! ##
 
 
 ### CIS 700, Syracuse U, Fall 2020
