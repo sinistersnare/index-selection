@@ -2,6 +2,13 @@
 
 ## Team Notes ##
 
+To run
+
+```
+$ pip install networkx
+$ run the thing with input (TODO!)
+```
+
 ( I wrote this in a separate repo, then realized I should just fork this).
 
 Index Selection Algorithm based on
