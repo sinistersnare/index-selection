@@ -4,6 +4,8 @@ from typing import Set, List, Iterator
 import itertools
 
 # YOU WIN NETWORKX FINE. ILL USE YOUR DISGUSTING ALGORITHM.
+import networkx as nx
+# from networkx.algorithms import bipartite
 from networkx.algorithms.matching import max_weight_matching
 
 class Search:
@@ -35,7 +37,7 @@ def form_search(raw_search: str) -> Search:
     # in other parts of the join?
     # R0(x,2) :- S1(y, x) S0(x, y) S2(q, 3)
     # does y matter in S0? Why does `y` matter but not `q`.
-    params = {idx for (idx, p) in enumerate((x.strip() for x in raw_params.split(','))) if p != '_'}
+    params = frozenset({idx for (idx, p) in enumerate((x.strip() for x in raw_params.split(','))) if p != '_'})
     return Search(name, params)
 
 # TODO FUCK THIS ONE TOO
@@ -86,12 +88,32 @@ R0(x,y,z) :- S0(_,y,z)
 R0(x,y,z) :- S0(x,y,z)
 """.strip()
 
+    # search = "R0"
+    # usages = get_search_usages(datalog)[search]
+    # b = nx.Graph()
+    # b.add_nodes_from([frozenset([1,3]), frozenset([1,4])], bipartite='U')
+    # b.add_node(frozenset([1,2]), bipartite='V')
+    # b.add_edge(frozenset([1,3]), frozenset([1,2]), role="lol")
+    # b = [c for c in nx.connected_components(b)]
+    # print(b.graph)
+    # nx.bipartite.maximum_matching(b)
+    # print(b.edges(data=False))
     # IDK if this function is useful for the actual work,
     # But its helpful to show usages at least.
-    usages = get_search_usages(datalog)
+    for search, usages in get_search_usages(datalog).items():
+        b = nx.Graph()
+        for useout in usages:
+            for usein in usages:
+                # Python subset
+                if usein < useout:
+                    b.add_node(usein, bipartite=0)
+                    b.add_node(useout, bipartite=1)
+                    b.add_edge(usein, useout)
+        print(b.edges)
+        max_match = nx.bipartite.maximum_matching(b)
 
     from pprint import pprint
-    pprint(usages)
+    # pprint(get_search_usages(datalog))
     # print("{}".format(list(clauses)[1]))
     # print(datalog)
 
