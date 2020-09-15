@@ -3,6 +3,7 @@
 from typing import FrozenSet, Tuple, Iterator, Dict, Set, Optional, List, Union
 import itertools
 import json
+import sys
 
 import networkx as nx
 
@@ -159,39 +160,14 @@ def indexes_for_program(program: str) -> List[Tuple[int]]:
     return {k: indexify(v) for k,v in min_chains.items()}
 
 def main():
-    simple = """
-R0(x,y) :- R1(x,y) R2(x,z)
-R0(x,y) :- R1(x,_) R3(y,x)
-R3(x,1) :- R0(x,y)
-""".strip()
+    if len(sys.argv) == 2:
+        with open(sys.argv[1], 'r') as file:
+            program = file.read()
+            indexes = indexes_for_program(program)
+            print(json.dumps(indexes))
+    else:
+        print("Usage: `python index_selection.py <file>")
 
-    # Lex should be `z < y < x` here!
-    # `x < y < z` gives 2 indexes with 5 columns used
-    # `z < y < x` gives 2 indexes with 4 columns used!
-    # The problem as states is min(|S|) some index-set S.
-    # but i feel like this is a useful metric too? Am I wrong?
-    # TODO: construct a pathological case that changing lex order
-    #       will make the |S| smaller.
-    pathological_lex = """
-R0(x,y,z) :- S0(x,_,_)
-R0(x,y,z) :- S0(_,y,z)
-R0(x,y,z) :- S0(x,y,z)
-""".strip()
-
-# similar to Figure 1b in the index-selection paper, changes made cause
-# our input syntax is simpler.
-    role_example = """
-Err(s,e) :- Src(uid,s) Path(s,e) Sink(e,_,con) Role(uid,_,_)
-Err(s,e) :- Src(uid,s) Path(s,e) Sink(e,dbid,op) Zone(dbid,doctor) Access(l,op) Role(uid,l,_)
-Err(s,e) :- Src(uid,s) Path(S,e) Sink(e,dbid,op) Zone(dbid,patient) Access(l,op) Role(uid,_,l)
-Err(s,e) :- Src(uid,s) Path(s,e) Sink(e,dbid,priv) Priveleged(l1,l2) Role(uid,l1,l2)
-""".strip()
-
-    failure = "Start(...) :- NewThing(w,_,y,_) NewThing(_,x,_,z) NewThing(_,x,y,z) NewThing(w,x,y,_)"
-
-    quick = "Q0(x,y,z) :- S0(x,_,z) S0(x,y,z)"
-
-    print(json.dumps(indexes_for_program(failure)))
 
 if __name__ == '__main__':
     main()

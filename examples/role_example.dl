@@ -1,0 +1,4 @@
+Err(s,e) :- Src(uid,s) Path(s,e) Sink(e,_,con) Role(uid,_,_)
+Err(s,e) :- Src(uid,s) Path(s,e) Sink(e,dbid,op) Zone(dbid,doctor) Access(l,op) Role(uid,l,_)
+Err(s,e) :- Src(uid,s) Path(S,e) Sink(e,dbid,op) Zone(dbid,patient) Access(l,op) Role(uid,_,l)
+Err(s,e) :- Src(uid,s) Path(s,e) Sink(e,dbid,priv) Priveleged(l1,l2) Role(uid,l1,l2)
