@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
-from typing import Set, List, Iterator
+from typing import FrozenSet, Tuple, Iterator, Dict, Set, Optional, List, Union
+from collections import defaultdict
+from pprint import pprint
 import itertools
+import json
+import sys
 
 import networkx as nx
 from networkx.algorithms import bipartite
@@ -9,119 +13,128 @@ from networkx.algorithms import bipartite
 # YOU WIN NETWORKX FINE. ILL USE YOUR DISGUSTING ALGORITHM.
 from networkx.algorithms.matching import max_weight_matching
 
-
-"""Yihao's code. We decided to use this over Davis's after review"""
-
+"""
+Yihao's code. We decided to use this over Davis's after review
+"""
 
 class Search:
-    """TODO: Docs! DO TESTS ALSO!
+    """
     A search is a single search in a clause's body, with grounded variables positions.
     so in the body if we see S0(x), then the clause will have
-    R(x, y) :- S0(x, y, 1) S1(1, y, x)
-    `name = S0` and `parameters = {0, 1}`
-    `name = S1` and `parameters = {1, 2}`
+    R(x, y) :- S0(x,y,1) S1(y,y,_)
+    `name = S0` and `parameters = ['x', 'y', '1']`, total = 3
+    `name = S1` and `parameters = ['y', '_']`, total = 3
+    Parameters is not a set because we dont have the positions yet,
+    So after we figure out what is joined, we can then use sets, as we will be dealing
+    with 0-indexed positions, not values that can appear anywhere.
     """
 
-    def __init__(self, name, parameters):
+    def __init__(self, name: str, parameters: Set[str], total: int):
         self.name = name
         self.parameters = parameters
+        self.total = total
 
     def __str__(self):
-        return "Search<name:{},parameters:{}>".format(
-            self.name, self.parameters)
+        return f"Search<name:{self.name},parameters:{self.parameters},total:{self.total}>"
     __repr__ = __str__
 
 
 def form_search(raw_search: str) -> Search:
-    """DOCS! tESTs!
-    Takes something like "S0(x,y)", returns a Search object.
+    """
+    Takes something like "S0(x,y)", returns a Search object: Search('S0'. {'x','y'})
     """
     name_end = raw_search.find('(')
     name = raw_search[:name_end]
-    raw_params = raw_search[name_end+1:-1]
-    # Do we need to take parameters into account that are used
-    # in other parts of the join?
-    # R0(x,2) :- S1(y, x) S0(x, y) S2(q, 3)
-    # does y matter in S0? Why does `y` matter but not `q`.
-    params = []
-    for rp in raw_params.split(','):
-        params.append(rp.strip())
-    return Search(name, params)
+
+    raw_params = raw_search[name_end+1:-1] # take out the parens.
+    params = [rp.strip() for rp in raw_params.split(',')]
+
+    return Search(name, params, len(params))
 
 
 def form_searches(line: str) -> Iterator[Search]:
-    """dOcS! TESTSSSSSS!!!
+    """
     Takes a Horn Clause and extracts relevant info.
     """
     body = line.split(":-")[1].strip()
 
-    return list(form_search(s) for s in body.split())
+    return [form_search(s) for s in body.split()]
 
 
-def isProperSubset(a: Set, b: Set):
-    '''
-    check if a is a proper subset of b
-    '''
-    return a.issubset(b) and a != b
+def get_usages_in_line(searches: List[Search]) -> Dict[str, List[Tuple[Tuple[int, ...], int]]]:
+    """
+    Takes a single line of searches, and constructs, for each search, which variables are used (by position 0-indexed).
+    If the variable is used in a join with another column, then
 
+    Returns a dict from a searches name to a a usage-structure:
+    The first element of the tuple is the usages themselves, by 0-index.
+    The second element is the number of columns in the search (not number used). This is a bit repetitive, as we only need
+        One length per name, but we can normalize it later.
+    """
+    usages = defaultdict(list)
+    for search in searches:
+        # Dont need to worry about searches that are only unused params.
+        if search.parameters == {'_'}:
+            continue
 
-def get_search_usages(program: str) -> None:
-    """DOCS! AND TESTS??!?!?!?"""
-    # I dont think that clauses really need to exist,
-    # Since I ensure only bound variables are used in the form_search
-    # function. So maybe we juts need a Set[Search] and union
-    # all the searches in each line?
-    # Maybe it was bad to remove info early, because now we dont have the info
-    # on constants used and such.
-    searches = list(form_searches(c) for c in program.split('\n'))
-    search_usages = {}
-    for rule_search in searches:
-        # get all used meta var in a rule
-        used_var = {}
-        for s in rule_search:
-            for p in s.parameters:
-                if p in used_var.keys():
-                    used_var[p] = used_var[p] + 1
-                else:
-                    used_var[p] = 1
-        for search in rule_search:
-            usage = []
-            for i in range(len(search.parameters)):
-                if used_var[search.parameters[i]] > 1:
-                    # have join here
-                    usage.append(i)
-            if search.name in search_usages.keys():
-                search_usages[search.name].add(tuple(usage))
+        uses = set()
+        amt = search.total
+        for i, param in enumerate(search.parameters):
+            if param == '_':
+                continue
+            if param.isdigit():
+                uses.add(i)
+                continue
+            # need to see if the param is being used in a join! Expensive!
+            for other_search in searches:
+                if param in other_search.parameters:
+                    uses.add(i)
+                    break
+        usages[search.name].append((tuple(uses), amt))
+    return usages
+
+def get_search_usages(program: str) -> Dict[str, Tuple[Set[Tuple[int, ...]], int]]:
+    """
+    Doesnt work the way we want it to, switch to using `get_usages_in_line`!
+    """
+    usages_per_line = [get_usages_in_line(form_searches(c)) for c in program.split('\n')]
+    total_usages = {}
+    # Normalize so we only have 1 amt for each rel,
+    # And also add all the usages for each line together.
+    for line in usages_per_line:
+        for rel, uses in line.items():
+            if not total_usages.get(rel):
+                total_usages[rel] = ({t[0] for t in uses}, uses[0][1])
             else:
-                search_usages[search.name] = {tuple(usage)}
-    return search_usages
+                total_usages[rel][0].update({t[0] for t in uses})
+    return total_usages
 
-
-def create_graph(searchs):
+def create_graph(searches) -> ('graph', 'u_edges'):
     '''
-    create a biparite graph, for a search U V are just replicate set of searchs
+    create a biparite graph, for a search U V are just replicate set of searches
     there is a edge if someone in V is a a proper subset of U
     in order to distinguish them, I use different tag name for U, V
     '''
+    u_edges = set()
     graph = nx.Graph()
     # add node
-    graph.add_nodes_from(map(lambda s: ("U", s), searchs), bipartite=0)
-    graph.add_nodes_from(map(lambda s: ("V", s), searchs), bipartite=1)
-    for u in searchs:
-        for v in searchs:
-            if isProperSubset(set(u), set(v)):
+    graph.add_nodes_from((("U", s) for s in searches), bipartite=0)
+    graph.add_nodes_from((("V", s) for s in searches), bipartite=1)
+    for u in searches:
+        for v in searches:
+            if set(u) < set(v):
                 graph.add_edge(("U", u), ("V", v))
-    return graph
+                u_edges.add(("U", u))
+    return (graph, u_edges)
 
 
-def min_chain_coverage(searchs):
+def min_chain_coverage(searches):
     '''
     calculate the minimum chain coverage of a graph.
     return Set(List(Tuple))
     '''
-    g = create_graph(searchs)
-    M_with_label = bipartite.matching.maximum_matching(
-        g, map(lambda s: ("U", s), searchs))
+    (g, u_edges) = create_graph(searches)
+    M_with_label = bipartite.matching.maximum_matching(g, u_edges)
     # remove tag in M
     M = []
     for m_key in M_with_label.keys():
@@ -129,7 +142,7 @@ def min_chain_coverage(searchs):
             node_from = m_key[1]
             node_to = M_with_label[m_key][1]
             M.append((node_from, node_to))
-    print("maximum matching is {}".format(M))
+    # print("maximum matching is {}".format(M))
     C = set()
 
     def no_prev(u1, M):
@@ -161,52 +174,55 @@ def min_chain_coverage(searchs):
             path.append(current)
         return tuple(path)
 
-    for u1 in searchs:
+    for u1 in searches:
         if no_prev(u1, M):
             C.add(find_path(u1, M))
     return C
 
-
 def min_index(searches):
     '''
-    convert chain coverage problem into index selection problem
+    convert chain coverage into index selection
     '''
+    # C is Iterable[Tuple[Tuple[int, ...], ...]]
     C = min_chain_coverage(searches)
-    print("min chain coverage: {}".format(C))
-    L = set()
-    for c in C:
-        if len(c) == 1:
-            L.add(tuple(c[0]))
-            continue
-        index = [c[0]]
-        for i in range(1, len(c)):
-            index.append(tuple(set(c[i]) - set(c[i-1])))
-        L.add(tuple(index))
-    return L
+    indexes = []
+    for chain in C:
+        index = list(chain[0])
+        for i in range(1, len(chain)):
+            index += set(chain[i]) - set(chain[i - 1])
+        indexes.append(tuple(index))
+    return indexes
 
+def fill_indexes(indexes: List[Tuple[int, ...]], num_columns: int) -> List[Tuple[int, ...]]:
+    """
+    Indexes need to have all columns in them, so we backfill each index with leftover elements, that arent used
+    In searches using that index.
+    """
+    findexes = []
+    for index in indexes:
+        sindex = set(index) # treat as set for the purposes of this.
+        to_add = [i for i in range(num_columns) if i not in sindex]
+        findexes.append(tuple(list(index) + to_add))
+    return findexes
+
+def indexes_for_program(program):
+    usages = get_search_usages(program)
+    indexes = {}
+    for rel, use in usages.items():
+        index = min_index(use[0])
+        filled_indexes = fill_indexes(index, use[1])
+        indexes[rel] = filled_indexes
+        # print(f"USES: {use[0]}\nINDEX: {index}")
+    return indexes
 
 def main():
-    datalog = """
-P0(y) :- Role(x,y,z) P0(x)
-P1(y,z) :- Role(x,y,z) P1(x,y)
-P2(x,y) :- Role(x,y,z) P2(x,z)
-P3(x,z,y) :- Role(x,y,z) P3(x,z,y)
-Role(x,y,z) :- P3(x,y,z)
-""".strip()
-
-    # IDK if this function is useful for the actual work,
-    # But its helpful to show usages at least.
-    usages = get_search_usages(datalog)
-
-    from pprint import pprint
-    pprint(usages)
-    # print("{}".format(list(clauses)[1]))
-    # print(datalog)
-    # calculate max_index
-    for relation in usages.keys():
-        index = min_index(usages[relation])
-        print("index of {} is {}".format(relation, index))
-
+    if len(sys.argv) == 2:
+        with open(sys.argv[1], 'r') as file:
+            program = file.read().strip()
+            indexes = indexes_for_program(program)
+            print(indexes)
+    else:
+        print("Usage: `python index_selection.py <file>")
 
 if __name__ == '__main__':
     main()
