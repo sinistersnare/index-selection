@@ -28,8 +28,13 @@ https://kmicinski.com/cis700-f20/
 TODO:
     * Get MIT license authorization from everyone in class.
 
-## END TEAM NOTES! ##
 
+### Testing Strategy ###
+
+* Gamut of Examples -- Davis, Mengyu
+* Yihao will turn our examples to input to Kris's `ais.rkt` to test if our output matches his.
+
+## END TEAM NOTES! ##
 
 ### CIS 700, Syracuse U, Fall 2020
 ### Instructor: Kris Micinski

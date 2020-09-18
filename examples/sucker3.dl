@@ -1,0 +1,2 @@
+Start(...) :- NewThing(w,x,y,_) NewThing(w,x,y,_) NewThing(w,x,y,_)
+Start(...) :- NewThing(_,_,_,1)

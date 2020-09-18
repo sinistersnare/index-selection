@@ -7,6 +7,11 @@ import sys
 
 import networkx as nx
 
+"""
+Davis's Code! We switched to using Yihaos after our initial review. Use isel.py instead!
+"""
+
+
 class Node:
     """
     A node in a bipartite graph, that distinguishes if its on the left or right.
@@ -35,7 +40,7 @@ class Node:
 
 
 class Search:
-    """TODO: Docs! DO TESTS ALSO!
+    """
     A search is a single search in a clause's body, with grounded variables positions.
     so in the body if we see S0(x), then the clause will have
     R(x, y) :- S0(x, y, 1) S1(1, y, x)
@@ -52,7 +57,7 @@ class Search:
     __repr__ = __str__
 
 def form_search(raw_search: str) -> Search:
-    """TODO: DOCS! tESTs!
+    """
     Takes something like "S0(x,y)", returns a Search object.
     """
     name_end = raw_search.find('(')
@@ -65,7 +70,10 @@ def form_search(raw_search: str) -> Search:
     return Search(name, params)
 
 def get_search_usages(searches: List[Search]) -> Dict[str, List[Tuple[int]]]:
-    """TODO: DOCS! AND TESTS??!?!?!?"""
+    """
+    Gets all usages of each search in the given list.
+    Doesnt work the way we want it to, switch to using `get_usages_in_line`!
+    """
     search_usages = {}
     for search in searches:
         params = tuple(search.parameters)
@@ -100,7 +108,7 @@ def find_max_match(usages: List[Tuple[int]]) -> Union[Dict[Node, Node], List[Tup
         return usages
     else:
         # Only take left->right directed edges.
-        return {k: v for k,v in nx.bipartite.hopcroft_karp_matching(graph, left_nodes).items()
+        return {k: v for k,v in nx.bipartite.maximum_matching(graph, left_nodes).items()
                         if not k.right}
 
 def construct_largest_chain(cur_chain: List[Tuple[int]], all_searches: List[Tuple[int]]):
@@ -128,11 +136,8 @@ def min_chain_cover(usages: List[Tuple[int]],
 
     # Get all starting nodes, nothing that is at least second in a max-match.
     max_values = max_matches.values()
-    chains = sorted((construct_largest_chain([u], usages) for u in usages
-                            if Node(True, u) not in max_values),
-                    key=len, reverse=True)
+    return [construct_largest_chain([u], usages) for u in usages if Node(True, u) not in max_values]
 
-    return chains
 
 def indexify(chains: List[List[Tuple[int]]]) -> List[Tuple[int]]:
     def single_index(chain: List[Tuple[int]]) -> Tuple[int]:
@@ -145,11 +150,13 @@ def indexify(chains: List[List[Tuple[int]]]) -> List[Tuple[int]]:
         return tuple(index)
     return [single_index(c) for c in chains]
 
+
 def indexes_for_program(program: str) -> List[Tuple[int]]:
     searches = []
     for line in program.split('\n'):
         headbody = [x.strip() for x in line.split(":-")]
-        if len(headbody) == 1:
+        # Ignore comments (Davis added this so I can comment code)
+        if len(headbody) != 2 or line.startswith("#"):
             # no searches in a clause without a body!
             continue
         searches += [form_search(s) for s in headbody[1].split()]
