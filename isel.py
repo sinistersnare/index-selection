@@ -17,6 +17,25 @@ from networkx.algorithms.matching import max_weight_matching
 Yihao's code. We decided to use this over Davis's after review
 """
 
+def search_list_to_sexpr(usage):
+    sexpr = "(set "
+    for s in usage:
+        sexpr += "(set "
+        for col in s:
+            sexpr += str(col)
+            sexpr += " "
+        sexpr += ")"
+        sexpr += " "
+    sexpr += ")"
+    return sexpr
+
+def total_to_sexpr(total):
+    sexpr = "(set "
+    for i in range(total):
+        sexpr += f" {i} "
+    sexpr += ")"
+    return sexpr
+
 class Search:
     """
     A search is a single search in a clause's body, with grounded variables positions.
@@ -209,6 +228,9 @@ def indexes_for_program(program):
     usages = get_search_usages(program)
     indexes = {}
     for rel, use in usages.items():
+        # sexpr = search_list_to_sexpr(use[0])
+        # totexpr = total_to_sexpr(use[1])
+        # print(f"{rel}: (indices-from-selections {sexpr}  {totexpr})")
         index = min_index(use[0])
         filled_indexes = fill_indexes(index, use[1])
         indexes[rel] = filled_indexes
